@@ -72,18 +72,14 @@ export default function AdminPortal() {
   const loadAdminMetrics = async () => {
     setAdminLoading(true);
     try {
-      // 1. Applications query - fetch pending/under review (0) and approved (2)
-      const pendingAppsRes = await adminApi.listApplications(0, 1, 50);
-      const approvedAppsRes = await adminApi.listApplications(2, 1, 50);
+      // 1. Applications query - fetch all applications without status filter
+      const appsRes = await adminApi.listApplications(undefined, 1, 100);
       
-      let combinedApps: any[] = [];
-      if (pendingAppsRes.success && pendingAppsRes.data && pendingAppsRes.data.items) {
-        combinedApps = [...combinedApps, ...pendingAppsRes.data.items];
+      if (appsRes.success && appsRes.data && appsRes.data.items) {
+        setApplications(appsRes.data.items);
+      } else {
+        setApplications([]);
       }
-      if (approvedAppsRes.success && approvedAppsRes.data && approvedAppsRes.data.items) {
-        combinedApps = [...combinedApps, ...approvedAppsRes.data.items];
-      }
-      setApplications(combinedApps);
 
       // 2. Mock Messages/Inquiries query
       const localAppsList = JSON.parse(localStorage.getItem('oru_local_apps') || '[]');
@@ -195,10 +191,14 @@ export default function AdminPortal() {
   const filteredApps = applications.filter((app) => {
     if (appFilter === "all") return true;
     const isPending = app.status === ApplicationStatus.PENDING || app.status === 0;
+    const isReviewing = app.status === 1;
     const isApproved = app.status === ApplicationStatus.APPROVED || app.status === ApplicationStatus.ENROLLED || app.status === 2 || app.status === 4;
+    const isRejected = app.status === ApplicationStatus.REJECTED || app.status === 3;
 
     if (appFilter === "pending") return isPending;
+    if (appFilter === "reviewing") return isReviewing;
     if (appFilter === "approved") return isApproved;
+    if (appFilter === "rejected") return isRejected;
     return true;
   });
 
@@ -316,8 +316,8 @@ export default function AdminPortal() {
               </div>
 
               {/* Status filtering */}
-              <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-none border border-gray-200 text-xs shadow-sm">
-                {['all', 'pending', 'approved'].map((f) => (
+              <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-1.5 rounded-none border border-gray-200 text-xs shadow-sm">
+                {['all', 'pending', 'reviewing', 'approved', 'rejected'].map((f) => (
                   <button
                     id={`filter-app-${f}`}
                     key={f}
@@ -349,10 +349,11 @@ export default function AdminPortal() {
                       <div className="flex justify-between items-center pb-3 border-b border-gray-100">
                         <span className="font-mono text-[9px] text-gray-400 font-bold uppercase tracking-widest break-all line-clamp-1">{app.id}</span>
                         <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 ${
-                          (app.status === "enrolled" || app.status === 4) ? "bg-[#16233c] text-white" :
-                          (app.status === "approved" || app.status === 2) ? "bg-green-100 text-green-800" :
-                          (app.status === "rejected" || app.status === 3) ? "bg-red-100 text-red-800" :
-                          "bg-gray-100 text-gray-600"
+                          (app.status === 'enrolled' || app.status === 4) ? 'bg-[#16233c] text-white' :
+                          (app.status === 'approved' || app.status === 2) ? 'bg-green-100 text-green-800' :
+                          (app.status === 'rejected' || app.status === 3) ? 'bg-red-100 text-red-800' :
+                          (app.status === 1) ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-600'
                         }`}>
                           {app.status === 0 ? "Pending" : app.status === 1 ? "Under Review" : app.status === 2 ? "Approved" : app.status === 3 ? "Rejected" : app.status === 4 ? "Enrolled" : app.status}
                         </span>
@@ -378,7 +379,7 @@ export default function AdminPortal() {
                            <span className="text-gray-400 block text-[9px] uppercase font-bold tracking-widest mb-2">Documents Uploaded ({app.documents.length})</span>
                            <div className="flex flex-col gap-1 bg-gray-50 p-2 border border-gray-100 min-h-[60px] max-h-[100px] overflow-y-auto">
                               {app.documents.map((doc: any) => (
-                                 <button key={doc.id} onClick={(e) => { e.preventDefault(); setPreviewDocument({url: doc.fileUrl, name: doc.name, type: doc.contentType}); }} className="w-full text-left text-xs text-[#16233c] font-medium hover:text-[#be123c] hover:underline flex items-center gap-1.5 truncate border-0 bg-transparent cursor-pointer py-1 p-0">
+                                 <button key={doc.id} onClick={(e) => { e.preventDefault(); setPreviewDocument({url: doc.fileUrl, name: doc.name, type: doc.contentType || (doc.fileName && doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : doc.fileName && doc.fileName.toLowerCase().match(/\.(jpeg|jpg|gif|png)$/) ? 'image/jpeg' : undefined)}); }} className="w-full text-left text-xs text-[#16233c] font-medium hover:text-[#be123c] hover:underline flex items-center gap-1.5 truncate border-0 bg-transparent cursor-pointer py-1 p-0">
                                    <FileText className="w-3 h-3 text-gray-400 shrink-0" />
                                    {doc.name} - {Math.round(doc.fileSize / 1024)}KB
                                  </button>
@@ -609,9 +610,9 @@ export default function AdminPortal() {
               </div>
             </div>
             <div className="flex-1 overflow-hidden bg-gray-100 flex items-center justify-center relative">
-              {previewDocument.type?.includes("image") ? (
+              {previewDocument.type?.includes("image") || previewDocument.url.split('?')[0].match(/\.(jpeg|jpg|gif|png)$/i) ? (
                 <img src={previewDocument.url} alt={previewDocument.name} className="max-w-full max-h-full object-contain p-4" />
-              ) : previewDocument.type?.includes("pdf") ? (
+              ) : previewDocument.type?.includes("pdf") || previewDocument.url.split('?')[0].match(/\.pdf$/i) ? (
                 <iframe src={previewDocument.url} className="w-full h-full border-0" title={previewDocument.name} />
               ) : (
                 <div className="flex flex-col items-center justify-center p-8 text-center">

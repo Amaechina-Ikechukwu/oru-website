@@ -141,8 +141,11 @@ export const studentApi = {
 // Admin API
 // ============================================
 export const adminApi = {
-  listApplications: (status: number = 0, page: number = 1, pageSize: number = 20) => 
-    fetchApi<PaginatedResult<any>>(`/api/admin/applications?status=${status}&page=${page}&pageSize=${pageSize}`, { method: 'GET' }),
+  listApplications: (status?: number | string, page: number = 1, pageSize: number = 20) => {
+    let url = `/api/admin/applications?page=${page}&pageSize=${pageSize}`;
+    if (status !== undefined && status !== 'all') url += `&status=${status}`;
+    return fetchApi<PaginatedResult<any>>(url, { method: 'GET' });
+  },
   getApplication: (id: string) => fetchApi<any>(`/api/admin/applications/${id}`, { method: 'GET' }),
   updateApplicationStatus: (id: string, status: number) => fetchApi<any>(`/api/admin/applications/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   admitStudent: (id: string) => fetchApi<any>(`/api/admin/applications/${id}/admit`, { method: 'POST' }),

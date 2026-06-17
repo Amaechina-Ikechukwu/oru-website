@@ -169,7 +169,7 @@ export const DocumentManager = ({ appId, uploadedDocuments, setUploadedDocuments
                 <div className="flex items-center gap-2 sm:self-center self-end">
                   <label className="text-[10px] bg-gray-50 border border-gray-300 px-3 py-1.5 cursor-pointer hover:bg-gray-100 text-gray-700 uppercase font-bold tracking-widest transition-colors">
                       {replacingId === d.id ? '...' : 'Replace'}
-                      <input type="file" className="hidden" disabled={uploading} onChange={(e) => handleReplace(e, d.id)} />
+                      <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" disabled={uploading} onChange={(e) => handleReplace(e, d.id)} />
                   </label>
                   <button type="button" onClick={() => handleDelete(d.id)} className="text-[10px] bg-white text-red-500 hover:text-red-700 uppercase font-bold tracking-widest transition-colors">
                     Delete
@@ -240,6 +240,7 @@ export const DocumentManager = ({ appId, uploadedDocuments, setUploadedDocuments
                       <input
                         type="file"
                         multiple
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                         id={`pending-doc-${doc.id}`}
                         className="hidden"
                         onChange={(e) => {
