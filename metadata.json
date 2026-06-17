@@ -1,0 +1,6 @@
+{
+  "name": "ORU Port Harcourt Study Center",
+  "description": "Website for Oral Roberts University Port Harcourt Study Center Nigeria, affiliated with Coal City University. Features include online application portal, student login, course registration, weekend learning schedule, and event updates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
