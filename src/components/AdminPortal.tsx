@@ -31,6 +31,9 @@ export default function AdminPortal() {
     onConfirm: () => void;
   } | null>(null);
 
+  // Document preview modal state
+  const [previewDocument, setPreviewDocument] = useState<{url: string, name: string, type?: string} | null>(null);
+
   // Common administration flags
   const [activeAdminSubTab, setActiveAdminSubTab] = useState("applications"); // 'applications', 'broadcasts', 'inbound'
   const [appFilter, setAppFilter] = useState("all"); // 'all', 'pending', 'approved'
@@ -375,10 +378,10 @@ export default function AdminPortal() {
                            <span className="text-gray-400 block text-[9px] uppercase font-bold tracking-widest mb-2">Documents Uploaded ({app.documents.length})</span>
                            <div className="flex flex-col gap-1 bg-gray-50 p-2 border border-gray-100 min-h-[60px] max-h-[100px] overflow-y-auto">
                               {app.documents.map((doc: any) => (
-                                 <a key={doc.id} href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[#16233c] font-medium hover:text-[#be123c] hover:underline flex items-center gap-1.5 truncate">
+                                 <button key={doc.id} onClick={(e) => { e.preventDefault(); setPreviewDocument({url: doc.fileUrl, name: doc.name, type: doc.contentType}); }} className="w-full text-left text-xs text-[#16233c] font-medium hover:text-[#be123c] hover:underline flex items-center gap-1.5 truncate border-0 bg-transparent cursor-pointer py-1 p-0">
                                    <FileText className="w-3 h-3 text-gray-400 shrink-0" />
                                    {doc.name} - {Math.round(doc.fileSize / 1024)}KB
-                                 </a>
+                                 </button>
                               ))}
                            </div>
                         </div>
@@ -578,6 +581,51 @@ export default function AdminPortal() {
         )}
 
       </div>
+
+      {/* Document Preview Modal */}
+      {previewDocument && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewDocument(null)}>
+          <div className="bg-white w-full max-w-4xl h-[85vh] shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
+              <h3 className="text-sm font-bold font-serif tracking-tight text-[#16233c] flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#be123c]" />
+                Document Preview: {previewDocument.name}
+              </h3>
+              <div className="flex items-center gap-2">
+                <a 
+                  href={previewDocument.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-100 font-bold text-[10px] uppercase tracking-widest transition"
+                >
+                  Open in New Tab
+                </a>
+                <button
+                  onClick={() => setPreviewDocument(null)}
+                  className="p-1.5 text-gray-400 hover:text-red-600 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden bg-gray-100 flex items-center justify-center relative">
+              {previewDocument.type?.includes("image") ? (
+                <img src={previewDocument.url} alt={previewDocument.name} className="max-w-full max-h-full object-contain p-4" />
+              ) : previewDocument.type?.includes("pdf") ? (
+                <iframe src={previewDocument.url} className="w-full h-full border-0" title={previewDocument.name} />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <FileText className="w-16 h-16 text-gray-300 mb-4" />
+                  <p className="text-sm font-medium text-gray-500 mb-4">Preview not available for this file type.</p>
+                  <a href={previewDocument.url} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-[#16233c] text-white hover:bg-black font-bold text-[10px] uppercase tracking-widest transition shadow-sm">
+                    Download File
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal Overlay */}
       {confirmAction && (
