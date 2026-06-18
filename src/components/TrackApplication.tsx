@@ -91,8 +91,8 @@ export default function TrackApplication() {
                        <span className="text-sm font-bold text-[#16233c]">{trackedApp.fullName}</span>
                     </div>
                     <div className="flex flex-col gap-1 col-span-2 md:col-span-1">
-                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Application ID</span>
-                       <span className="text-sm font-bold text-[#16233c] font-mono break-all">{trackedApp.id}</span>
+                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email</span>
+                       <span className="text-sm font-bold text-[#16233c] font-mono break-all">{trackedApp.email || searchTrackingId}</span>
                     </div>
                     <div className="flex flex-col gap-1 col-span-2 border-t border-gray-100 pt-4">
                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Selected Program</span>
@@ -116,11 +116,11 @@ export default function TrackApplication() {
                  </div>
 
                  {/* Upload Documents in Tracker */}
-                 {(successAppId || searchTrackingId) && trackedApp.status !== 2 && trackedApp.status !== 3 && (
+                 {(successAppId) && trackedApp.status !== 2 && trackedApp.status !== 3 && (
                    <div className="w-full mt-4 flex flex-col gap-6 border-t border-gray-100 pt-6">
                       <h5 className="text-sm font-bold font-serif text-[#16233c] tracking-tight text-left">Manage Documents</h5>
                       <DocumentManager 
-                        appId={successAppId || searchTrackingId} 
+                        appId={successAppId} 
                         uploadedDocuments={uploadedDocuments} 
                         setUploadedDocuments={setUploadedDocuments} 
                       />

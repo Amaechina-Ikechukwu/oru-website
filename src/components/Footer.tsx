@@ -88,7 +88,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
             </h4>
             <div className="flex flex-col gap-5">
               <div className="flex items-start gap-4 group cursor-default">
-                <div className="p-2.5 bg-white/5 border border-white/10 group-hover:bg-red-500/20 group-hover:border-red-500/30 transition-all rounded-lg shrink-0">
+                <div className="p-2.5 bg-white/5 border border-white/10 group-hover:bg-red-500/20 group-hover:border-red-500/30 transition-all shrink-0">
                   <MapPin className="w-4 h-4 text-gray-300 group-hover:text-red-400" />
                 </div>
                 <p className="text-sm text-gray-400 leading-relaxed font-medium">
@@ -108,7 +108,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
             
             <div className="flex flex-col gap-5 text-sm text-gray-400">
               <div className="flex items-center gap-4 group cursor-default">
-                <div className="p-2.5 bg-white/5 border border-white/10 group-hover:bg-red-500/20 group-hover:border-red-500/30 transition-all rounded-lg shrink-0">
+                <div className="p-2.5 bg-white/5 border border-white/10 group-hover:bg-red-500/20 group-hover:border-red-500/30 transition-all shrink-0">
                   <Phone className="w-4 h-4 text-gray-300 group-hover:text-red-400" />
                 </div>
                 <div className="flex flex-col">
@@ -117,7 +117,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
               </div>
               
               <div className="flex items-center gap-4 group cursor-default">
-                <div className="p-2.5 bg-white/5 border border-white/10 group-hover:bg-red-500/20 group-hover:border-red-500/30 transition-all rounded-lg shrink-0">
+                <div className="p-2.5 bg-white/5 border border-white/10 group-hover:bg-red-500/20 group-hover:border-red-500/30 transition-all shrink-0">
                   <Mail className="w-4 h-4 text-gray-300 group-hover:text-red-400" />
                 </div>
                 <div className="flex flex-col overflow-hidden min-w-0">
@@ -127,7 +127,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
             </div>
 
             <div className="mt-2 pt-6 border-t border-white/10">
-              <button onClick={() => setCurrentTab('contact')} className="w-full text-center py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300">
+              <button onClick={() => setCurrentTab('contact')} className="w-full text-center py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[11px] font-bold uppercase tracking-widest transition-all duration-300">
                 Contact Support Center
               </button>
             </div>
