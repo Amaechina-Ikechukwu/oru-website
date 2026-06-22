@@ -69,16 +69,35 @@ export default function AdminPortal() {
   };
 
   // Load data from DB
-  const loadAdminMetrics = async () => {
+  const loadAdminMetrics = async (overrideFilter?: string | any) => {
     setAdminLoading(true);
     try {
-      // 1. Applications query - fetch all applications without status filter
-      const appsRes = await adminApi.listApplications(undefined, 1, 100);
+      const currentFilter = (typeof overrideFilter === 'string') ? overrideFilter : appFilter;
       
-      if (appsRes.success && appsRes.data && appsRes.data.items) {
-        setApplications(appsRes.data.items);
+      if (currentFilter === 'all') {
+        const [resPending, resApproved, resRejected] = await Promise.all([
+          adminApi.listApplications(undefined, 1, 100),
+          adminApi.listApplications(2, 1, 100),
+          adminApi.listApplications(3, 1, 100)
+        ]);
+        const allApps = [];
+        if (resPending.success && resPending.data?.items) allApps.push(...resPending.data.items);
+        if (resApproved.success && resApproved.data?.items) allApps.push(...resApproved.data.items);
+        if (resRejected.success && resRejected.data?.items) allApps.push(...resRejected.data.items);
+        setApplications(allApps);
       } else {
-        setApplications([]);
+        let status;
+        if (currentFilter === 'pending') status = 0;
+        else if (currentFilter === 'reviewing') status = 1;
+        else if (currentFilter === 'approved') status = 2;
+        else if (currentFilter === 'rejected') status = 3;
+        
+        const res = await adminApi.listApplications(status, 1, 100);
+        if (res.success && res.data?.items) {
+          setApplications(res.data.items);
+        } else {
+          setApplications([]);
+        }
       }
 
       // 2. Mock Messages/Inquiries query
@@ -100,9 +119,9 @@ export default function AdminPortal() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('oru_auth_token') : null;
     if (token) {
       setIsLoggedIn(true);
-      loadAdminMetrics();
+      loadAdminMetrics(appFilter);
     }
-  }, []);
+  }, [appFilter]);
 
   const handleUpdateAppStatus = async (appId: string, targetStatus: ApplicationStatus | number) => {
     try {
@@ -258,7 +277,7 @@ export default function AdminPortal() {
           <div className="flex items-center gap-3">
             <button
               id="admin-reload-btn"
-              onClick={loadAdminMetrics}
+              onClick={() => loadAdminMetrics()}
               className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 shrink-0 shadow-sm bg-white"
             >
               <RefreshCw className={`w-4 h-4 shrink-0 text-[#be123c] ${adminLoading ? 'animate-spin' : ''}`} />
