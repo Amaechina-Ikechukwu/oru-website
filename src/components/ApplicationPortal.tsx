@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PROGRAMS } from '../data';
 import { ApplicationStatus } from '../types';
-import { CheckCircle, Search, AlertTriangle, ChevronRight, GraduationCap, Building, Wallet, Calendar, Copy, ChevronDown, Plus, X, FileText, Upload, Info } from 'lucide-react';
+import { CheckCircle, Search, AlertTriangle, ChevronRight, GraduationCap, Building, Wallet, Calendar, Copy, ChevronDown, Plus, X, FileText, Upload, Info, RefreshCw } from 'lucide-react';
 import { PDF_CURRICULUM, PAYMENT_ACCOUNTS } from '../curriculumData';
 import { applicationsApi } from '../api';
 import { toast } from 'sonner';
@@ -689,7 +689,13 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
                        disabled={loading}
                        className="w-full py-4 mt-2 bg-[#16233c] hover:bg-black text-white font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
                      >
-                       {loading ? "Processing..." : "Submit Application Form"}
+                       {loading ? (
+                         <>
+                           <RefreshCw className="w-4 h-4 animate-spin" /> Processing...
+                         </>
+                       ) : (
+                         "Submit Application Form"
+                       )}
                      </button>
                    </form>
                  ) : (

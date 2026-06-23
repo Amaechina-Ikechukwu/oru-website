@@ -53,6 +53,10 @@ export default function AdminPortal() {
   const [setupPassword, setSetupPassword] = useState("");
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [updatingAppStatus, setUpdatingAppStatus] = useState<string | null>(null);
+  const [updatingStudent, setUpdatingStudent] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,7 +151,19 @@ export default function AdminPortal() {
     }
   }, [appFilter]);
 
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+    setConfirmLoading(true);
+    try {
+      await confirmAction.onConfirm();
+    } finally {
+      setConfirmLoading(false);
+      setConfirmAction(null);
+    }
+  };
+
   const handleUpdateAppStatus = async (appId: string, targetStatus: ApplicationStatus | number) => {
+    setUpdatingAppStatus(appId);
     try {
       const statusValue = typeof targetStatus === 'number' ? targetStatus : 
                           targetStatus === ApplicationStatus.APPROVED ? 2 : 
@@ -168,10 +184,13 @@ export default function AdminPortal() {
       if (err.message && err.message.includes('401')) {
         handleLogout();
       }
+    } finally {
+      setUpdatingAppStatus(null);
     }
   };
 
   const handleAdmitStudent = async (appId: string) => {
+    setUpdatingAppStatus(appId);
     try {
       const res = await adminApi.admitStudent(appId);
       if (res.success) {
@@ -184,6 +203,8 @@ export default function AdminPortal() {
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to admit student");
+    } finally {
+      setUpdatingAppStatus(null);
     }
   };
 
@@ -238,6 +259,7 @@ export default function AdminPortal() {
 
   const handleReviewInstallment = async (submissionId: string, status: number) => {
     if (!selectedStudent) return;
+    setUpdatingStudent(submissionId);
     try {
       const res = await adminApi.reviewInstallment(selectedStudent, submissionId, status);
       if (res.success) {
@@ -250,6 +272,8 @@ export default function AdminPortal() {
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to update installer status");
+    } finally {
+      setUpdatingStudent(null);
     }
   };
 
@@ -257,6 +281,7 @@ export default function AdminPortal() {
     e.preventDefault();
     if (!setupToken || !setupFullName || !setupPassword) return;
 
+    setSetupLoading(true);
     try {
       const res = await adminApi.setupAdmin({
         token: setupToken,
@@ -276,6 +301,8 @@ export default function AdminPortal() {
       }
     } catch (err: any) {
       toast.error(err.message || "Setup failed");
+    } finally {
+      setSetupLoading(false);
     }
   };
 
@@ -316,7 +343,7 @@ export default function AdminPortal() {
         email: inviteEmail,
         role: inviteRole,
         permissions: perms,
-        frontendSetupUrl: window.location.origin + window.location.pathname + "?token="
+        frontendSetupUrl: window.location.origin + window.location.pathname
       });
 
       if (res.success) {
@@ -407,9 +434,17 @@ export default function AdminPortal() {
                </div>
                <button
                  type="submit"
-                 className="mt-2 w-full py-4 bg-[#16233c] hover:bg-black text-white font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center disabled:opacity-50"
+                 disabled={setupLoading}
+                 className="mt-2 w-full py-4 bg-[#16233c] hover:bg-black text-white font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                >
-                 Complete Setup
+                 {setupLoading ? (
+                   <>
+                     <RefreshCw className="w-4 h-4 animate-spin" />
+                     Setting up...
+                   </>
+                 ) : (
+                   "Complete Setup"
+                 )}
                </button>
             </div>
           </form>
@@ -448,9 +483,16 @@ export default function AdminPortal() {
              <button
                type="submit"
                disabled={loginLoading}
-               className="mt-2 w-full py-4 bg-[#16233c] hover:bg-black text-white font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center disabled:opacity-50"
+               className="mt-2 w-full py-4 bg-[#16233c] hover:bg-black text-white font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
              >
-               {loginLoading ? "Authenticating..." : "Login"}
+               {loginLoading ? (
+                 <>
+                   <RefreshCw className="w-4 h-4 animate-spin" />
+                   Authenticating...
+                 </>
+               ) : (
+                 "Login"
+               )}
              </button>
           </div>
         </form>
@@ -1047,15 +1089,19 @@ export default function AdminPortal() {
                          <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-200">
                            <button 
                              onClick={() => handleReviewInstallment(inst.id, 1)}
-                             className="py-3 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 font-bold uppercase tracking-widest text-xs transition flex items-center justify-center gap-2"
+                             disabled={updatingStudent === inst.id}
+                             className="py-3 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 font-bold uppercase tracking-widest text-xs transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                            >
-                             <Check className="w-3 h-3" /> Approve
+                             {updatingStudent === inst.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} 
+                             Approve
                            </button>
                            <button 
                              onClick={() => handleReviewInstallment(inst.id, 2)}
-                             className="py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold uppercase tracking-widest text-xs transition flex items-center justify-center gap-2"
+                             disabled={updatingStudent === inst.id}
+                             className="py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold uppercase tracking-widest text-xs transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                            >
-                             <X className="w-3 h-3" /> Reject
+                             {updatingStudent === inst.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />} 
+                             Reject
                            </button>
                          </div>
                        )}
@@ -1124,18 +1170,24 @@ export default function AdminPortal() {
              <div className="flex items-center justify-end gap-3 mt-2">
                 <button
                   onClick={() => setConfirmAction(null)}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 hover:bg-gray-100 font-bold text-[10px] uppercase tracking-widest transition"
+                  disabled={confirmLoading}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 hover:bg-gray-100 font-bold text-[10px] uppercase tracking-widest transition disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    confirmAction.onConfirm();
-                    setConfirmAction(null);
-                  }}
-                  className="px-6 py-3 bg-[#be123c] text-white hover:bg-[#9f0f32] font-bold text-[10px] uppercase tracking-widest transition shadow-sm"
+                  onClick={handleConfirmAction}
+                  disabled={confirmLoading}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-[#be123c] text-white hover:bg-[#9f0f32] font-bold text-[10px] uppercase tracking-widest transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Confirm Action
+                  {confirmLoading ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      Wait...
+                    </>
+                  ) : (
+                    "Confirm Action"
+                  )}
                 </button>
              </div>
           </div>

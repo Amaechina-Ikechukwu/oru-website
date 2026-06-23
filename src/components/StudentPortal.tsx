@@ -659,9 +659,15 @@ export default function StudentPortal({ currentStudent, setCurrentStudent }: Stu
               <button
                 type="submit"
                 disabled={payingTuition || !tuitionPayAmount || !tuitionReceiptFile}
-                className="w-full py-4 mt-2 bg-[#16233c] hover:bg-[#0d1629] text-white font-bold text-xs uppercase tracking-widest transition rounded-none"
+                className="w-full py-4 mt-2 bg-[#16233c] hover:bg-[#0d1629] text-white font-bold text-xs uppercase tracking-widest transition flex items-center justify-center gap-2 rounded-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {payingTuition ? "Uploading..." : "Submit Receipt"}
+                {payingTuition ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Uploading...
+                  </>
+                ) : (
+                  "Submit Receipt"
+                )}
               </button>
               {paySuccess && <p className="text-[10px] font-bold text-green-600 text-center uppercase tracking-widest mt-2 border border-green-200 bg-green-50 py-2 rounded-none">Receipt Submitted Successfully!</p>}
             </form>
