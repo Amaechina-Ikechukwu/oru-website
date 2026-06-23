@@ -40,7 +40,9 @@ export const PDF_CURRICULUM = [
       { name: "Philosophy of Education (PhD)", duration: "2 Years", price: "₦650,000" },
       { name: "Guidance and Counselling (PhD)", duration: "2 Years", price: "₦650,000" },
       { name: "Educational Psychology (PhD)", duration: "2 Years", price: "₦650,000" },
-      { name: "Advanced Management (PhD)", duration: "2 Years", price: "₦650,000" }
+      { name: "Advanced Management (PhD)", duration: "2 Years", price: "₦650,000" },
+      { name: "Doctor of Philosophy (PhD) in Contextual Theology", duration: "2 Years", price: "₦650,000" },
+      { name: "Doctor of Philosophy (PhD) in Clinical Psychology", duration: "2 Years", price: "₦650,000" }
     ]
   }
 ];

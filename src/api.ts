@@ -96,7 +96,21 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   const result = isJson ? await response.json() : null;
 
   if (!response.ok) {
-    throw new Error((result && result.message) || `API Error: ${response.status} ${response.statusText}`);
+    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+    if (result) {
+      if (result.message) {
+        errorMsg = result.message;
+      } else if (result.errors) {
+        // Handle ASP.NET Core ValidationProblemDetails
+        const errorDetails = Object.values(result.errors).flat().join(', ');
+        if (errorDetails) {
+          errorMsg = errorDetails;
+        } else if (result.title) {
+          errorMsg = result.title;
+        }
+      }
+    }
+    throw new Error(errorMsg);
   }
 
   return result as ApiResponse<T>;
@@ -183,7 +197,16 @@ export const adminApi = {
   removeAnnouncementImage: (id: string, imageUrl: string) => fetchApi<any>(`/api/admin/announcements/${id}/images?imageUrl=${encodeURIComponent(imageUrl)}`, { method: 'DELETE' }),
 
   listAdmins: () => fetchApi<any[]>('/api/admin/admins', { method: 'GET' }),
-  createAdmin: (data: any) => fetchApi<any>('/api/admin/admins', { method: 'POST', body: JSON.stringify(data) }),
+  setupAdmin: (data: any) => fetchApi<any>('/api/admin/admins/setup', { method: 'POST', body: JSON.stringify(data) }),
+  inviteAdmin: (data: any) => fetchApi<any>('/api/admin/admins/invite', { method: 'POST', body: JSON.stringify(data) }),
+  getAdminLogs: (adminId?: string, action?: string) => {
+    let url = `/api/admin/admins/logs`;
+    const params = new URLSearchParams();
+    if (adminId) params.append('adminId', adminId);
+    if (action) params.append('action', action);
+    if (params.toString()) url += `?${params.toString()}`;
+    return fetchApi<any>(url, { method: 'GET' });
+  },
   deactivateAdmin: (id: string) => fetchApi<any>(`/api/admin/admins/${id}`, { method: 'DELETE' }),
 };
 

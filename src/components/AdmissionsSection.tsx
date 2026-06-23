@@ -18,10 +18,20 @@ export default function AdmissionsSection({ setCurrentTab }: AdmissionsSectionPr
       case 'cert-theo': return 40000;
       case 'dip-theo': return 60000;
       case 'ba-theo': return 280000;
-      case 'phd-missions': return 650000;
       case 'ma-theo': return 400000;
+      case 'phd-missions': return 650000;
       case 'phd-edu': return 650000;
       case 'phd-theo': return 650000;
+      case 'contextual-theology': return 650000;
+      case 'clinical-psychology': return 650000;
+      case 'theology': return 280000;
+      case 'leadership': return 280000;
+      case 'business': return 280000;
+      case 'education': return 280000;
+      case 'management': return 280000;
+      case 'computer-science': return 280000;
+      case 'counseling': return 280000;
+      case 'peace-conflict': return 280000;
       default: return 60000;
     }
   };

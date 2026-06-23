@@ -311,7 +311,8 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
             { value: 2, label: "Diploma Programs (2 years)" },
             { value: 3, label: "Undergraduate / Bachelor's Degree (4 years)" },
             { value: 4, label: "Postgraduate Diploma (PGDE, PDE)" },
-            { value: 5, label: "Master's Degree (M.Ed., etc.)" }
+            { value: 5, label: "Master's Degree (M.Ed., etc.)" },
+            { value: 6, label: "Doctorate (PhD) Programs" }
           ]);
         }
       } catch (err) {
@@ -320,7 +321,8 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
             { value: 2, label: "Diploma Programs (2 years)" },
             { value: 3, label: "Undergraduate / Bachelor's Degree (4 years)" },
             { value: 4, label: "Postgraduate Diploma (PGDE, PDE)" },
-            { value: 5, label: "Master's Degree (M.Ed., etc.)" }
+            { value: 5, label: "Master's Degree (M.Ed., etc.)" },
+            { value: 6, label: "Doctorate (PhD) Programs" }
           ]);
       }
     };
@@ -626,6 +628,35 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
                          options={studyLevels}
                          placeholder="Select Study Level"
                        />
+                     </div>
+
+                     {program && studyLevelId ? (
+                       <div className="flex items-center justify-between bg-white border border-[#be123c] p-4 mt-2 shadow-sm rounded-none">
+                         <span className="text-xs font-bold text-[#16233c] uppercase tracking-widest flex items-center gap-2">
+                           <Wallet className="w-4 h-4 text-[#be123c]" /> Tuition Fee Reference
+                         </span>
+                         <span className="font-mono font-bold text-xl text-[#be123c]">
+                           {studyLevelId === 1 ? "₦40,000" : 
+                            studyLevelId === 2 ? "₦60,000" : 
+                            studyLevelId === 3 ? "₦280,000" : 
+                            studyLevelId === 4 ? "₦280,000" : 
+                            studyLevelId === 5 ? "₦400,000" : 
+                            studyLevelId === 6 ? "₦650,000" : ""}
+                         </span>
+                       </div>
+                     ) : null}
+
+                     <div className="bg-gray-50 border border-gray-200 p-4 mt-2">
+                       <h5 className="font-bold text-[#16233c] text-xs uppercase tracking-widest mb-2 border-b border-gray-200 pb-2">Academic Roadmap Recommendation</h5>
+                       <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                         If your goal is to become both a theologian and a professional counselor, a very strong academic combination would be:
+                       </p>
+                       <ul className="list-disc list-inside text-xs text-gray-700 mt-2 space-y-1 font-medium">
+                         <li>BA in Biblical Literature</li>
+                         <li>MA in Professional Counseling</li>
+                         <li>PhD in Contextual Theology (from Oral Roberts University)</li>
+                         <li>Or PhD in Clinical Psychology with a focus on psychopathology/abnormal psychology from a recognized psychology department.</li>
+                       </ul>
                      </div>
 
                      <div className="flex flex-col gap-2 mt-4 border-t border-gray-200 pt-6">

@@ -109,6 +109,22 @@ export const PROGRAMS = [
     description: "Short-term targeted professional advancements in executive ministry development, Christian conflict resolution, and strategic leadership.",
     requirements: "Tertiary school certificate or letter of recommendation from your local assembly.",
     careerPaths: ["Certified Church Administrator", "Strategic Conflict Mediator", "Executive Church Coordinator"]
+  },
+  {
+    id: "contextual-theology",
+    title: "Ph.D. in Contextual Theology",
+    duration: "Postgraduate (PhD)",
+    description: "Advanced doctoral research in Contextual Theology under the supervision of recognized university frameworks.",
+    requirements: "Master's degree in Theology, Ministry, or related fields.",
+    careerPaths: ["Theologian", "University Professor", "Senior Researcher", "Global Ministry Leader"]
+  },
+  {
+    id: "clinical-psychology",
+    title: "Ph.D. in Clinical Psychology",
+    duration: "Postgraduate (PhD)",
+    description: "Doctoral program focusing on psychopathology, abnormal psychology, and professional counseling integration.",
+    requirements: "Master's degree in Counseling, Psychology, or related fields.",
+    careerPaths: ["Clinical Psychologist", "Professional Counselor", "Academic Researcher", "Mental Health Director"]
   }
 ];
 

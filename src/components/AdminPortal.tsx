@@ -39,9 +39,20 @@ export default function AdminPortal() {
   const [studentInstallments, setStudentInstallments] = useState<any[]>([]);
   
   // Common administration flags
-  const [activeAdminSubTab, setActiveAdminSubTab] = useState("applications"); // 'applications', 'broadcasts', 'inbound', 'students'
+  const [activeAdminSubTab, setActiveAdminSubTab] = useState("applications"); // 'applications', 'broadcasts', 'inbound', 'students', 'system'
   const [appFilter, setAppFilter] = useState("all"); // 'all', 'pending', 'approved'
   const [adminLoading, setAdminLoading] = useState(false);
+  
+  // System Admin State
+  const [adminList, setAdminList] = useState<any[]>([]);
+  const [adminLogs, setAdminLogs] = useState<any[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState(1); // 1 = AdmissionsOfficer
+  const [setupToken, setSetupToken] = useState("");
+  const [setupFullName, setSetupFullName] = useState("");
+  const [setupPassword, setSetupPassword] = useState("");
+  const [isSettingUp, setIsSettingUp] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +135,15 @@ export default function AdminPortal() {
     if (token) {
       setIsLoggedIn(true);
       loadAdminMetrics(appFilter);
+    }
+
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const setupTokenParam = urlParams.get('token');
+      if (setupTokenParam) {
+        setSetupToken(setupTokenParam);
+        setIsSettingUp(true);
+      }
     }
   }, [appFilter]);
 
@@ -233,6 +253,105 @@ export default function AdminPortal() {
     }
   };
 
+  const handleSetupAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!setupToken || !setupFullName || !setupPassword) return;
+
+    try {
+      const res = await adminApi.setupAdmin({
+        token: setupToken,
+        fullName: setupFullName,
+        password: setupPassword
+      });
+      if (res.success) {
+        toast.success(res.message || "Setup successful! You can now log in.");
+        setIsSettingUp(false);
+        setSetupToken("");
+        setSetupPassword("");
+        setSetupFullName("");
+        // Remove token from url
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        toast.error(res.message || "Setup failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Setup failed");
+    }
+  };
+
+  const loadSystemData = async () => {
+    try {
+      const [adminsRes, logsRes] = await Promise.all([
+        adminApi.listAdmins(),
+        adminApi.getAdminLogs()
+      ]);
+      if (adminsRes.success) setAdminList(adminsRes.data || []);
+      if (logsRes.success) setAdminLogs(logsRes.data || []);
+    } catch (err) {
+      toast.error("Failed to load system data");
+    }
+  };
+
+  useEffect(() => {
+    if (isLoggedIn && activeAdminSubTab === "system") {
+      loadSystemData();
+    }
+  }, [activeAdminSubTab, isLoggedIn]);
+
+  const handleInviteAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail) return;
+
+    setIsInviting(true);
+    try {
+      const perms = {
+        canApproveApplications: inviteRole === 0 || inviteRole === 1,
+        canPostAnnouncements: inviteRole === 0 || inviteRole === 1,
+        canUpdateGrades: inviteRole === 0 || inviteRole === 2,
+        canManageFinance: inviteRole === 0 || inviteRole === 3,
+        canManageAdmins: inviteRole === 0
+      };
+
+      const res = await adminApi.inviteAdmin({
+        email: inviteEmail,
+        role: inviteRole,
+        permissions: perms,
+        frontendSetupUrl: window.location.origin + window.location.pathname + "?token="
+      });
+
+      if (res.success) {
+        toast.success(res.message || "Invitation sent!");
+        setInviteEmail("");
+      } else {
+        toast.error(res.message || "Failed to invite admin");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to invite admin");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleDeactivateAdmin = async (id: string) => {
+    setConfirmAction({
+      title: "Deactivate Admin",
+      message: "Are you sure you want to deactivate this admin?",
+      onConfirm: async () => {
+        try {
+          const res = await adminApi.deactivateAdmin(id);
+          if (res.success) {
+            toast.success(res.message || "Admin deactivated");
+            loadSystemData();
+          } else {
+            toast.error(res.message || "Failed to deactivate admin");
+          }
+        } catch (err: any) {
+          toast.error(err.message || "Failed to deactivate admin");
+        }
+      }
+    });
+  };
+
   const handleDeleteMessage = async (msgId: string) => {
     try {
       setMessages(messages.filter(m => m.id !== msgId));
@@ -257,6 +376,47 @@ export default function AdminPortal() {
   });
 
   if (!isLoggedIn) {
+    if (isSettingUp) {
+      return (
+        <div className="w-full flex-grow flex items-center justify-center p-8 bg-gray-50 flex-col font-sans py-24 border-t border-gray-200">
+          <form onSubmit={handleSetupAdmin} className="w-full max-w-sm bg-white p-8 border border-gray-200 shadow-sm flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-bold font-serif tracking-tight text-[#16233c] text-left">Setup Administrator</h2>
+              <p className="text-sm text-gray-500 font-medium text-left">Enter your full name and set a secure password.</p>
+            </div>
+            <div className="flex flex-col gap-4 text-left">
+               <div className="flex flex-col gap-1.5">
+                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Full Name</label>
+                 <input
+                   type="text"
+                   required
+                   value={setupFullName}
+                   onChange={(e) => setSetupFullName(e.target.value)}
+                   className="p-3 text-sm border border-gray-300 focus:outline-none focus:border-[#16233c] transition font-mono bg-gray-50"
+                 />
+               </div>
+               <div className="flex flex-col gap-1.5">
+                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Password</label>
+                 <input
+                   type="password"
+                   required
+                   value={setupPassword}
+                   onChange={(e) => setSetupPassword(e.target.value)}
+                   className="p-3 text-sm border border-gray-300 focus:outline-none focus:border-[#16233c] transition font-mono bg-gray-50"
+                 />
+               </div>
+               <button
+                 type="submit"
+                 className="mt-2 w-full py-4 bg-[#16233c] hover:bg-black text-white font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center disabled:opacity-50"
+               >
+                 Complete Setup
+               </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
     return (
       <div className="w-full flex-grow flex items-center justify-center p-8 bg-gray-50 flex-col font-sans py-24 border-t border-gray-200">
         <form onSubmit={handleLogin} className="w-full max-w-sm bg-white p-8 border border-gray-200 shadow-sm flex flex-col gap-6">
@@ -339,7 +499,7 @@ export default function AdminPortal() {
             { id: 'applications', label: 'Admissions Applications', icon: FileText },
             { id: 'broadcasts', label: 'Broadcast Announcements', icon: Megaphone },
             { id: 'students', label: 'Students & Finances', icon: Bookmark },
-            { id: 'inbound', label: 'Inbound Support Desk', icon: MessageCircle },
+            { id: 'system', label: 'System Management', icon: Sparkles },
           ].map((sub) => {
             const Icon = sub.icon;
             const isActive = activeAdminSubTab === sub.id;
@@ -694,6 +854,134 @@ export default function AdminPortal() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        )}
+
+        {/* SUB TAB 5: System Management */}
+        {activeAdminSubTab === "system" && (
+          <div className="flex flex-col gap-10" id="admin-system-tab">
+            <div className="flex flex-col md:flex-row gap-6">
+              
+              {/* Invite Admin Form */}
+              <form onSubmit={handleInviteAdmin} className="bg-white p-6 md:p-8 border border-gray-200 flex-1 shadow-sm flex flex-col gap-4">
+                 <div className="border-b border-gray-100 pb-4 mb-2">
+                    <h3 className="text-lg font-bold font-serif text-[#16233c] tracking-tight">Invite Administrator</h3>
+                    <p className="text-xs text-gray-500 font-medium">Send an invitation email to a new staff member to complete their setup.</p>
+                 </div>
+                 <div className="flex flex-col gap-1.5">
+                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Email Address</label>
+                   <input
+                     type="email"
+                     required
+                     value={inviteEmail}
+                     onChange={(e) => setInviteEmail(e.target.value)}
+                     className="p-3 text-sm border border-gray-300 focus:outline-none focus:border-[#16233c] transition font-mono bg-gray-50"
+                     placeholder="staff@oru.edu"
+                   />
+                 </div>
+                 <div className="flex flex-col gap-1.5">
+                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Role</label>
+                   <select
+                     value={inviteRole}
+                     onChange={(e) => setInviteRole(Number(e.target.value))}
+                     className="p-3 text-sm border border-gray-300 focus:outline-none focus:border-[#16233c] transition font-sans bg-gray-50"
+                   >
+                     <option value={1}>Admissions Officer</option>
+                     <option value={2}>Academic Advisor</option>
+                     <option value={3}>Bursar / Finance</option>
+                     <option value={0}>Super Admin</option>
+                   </select>
+                 </div>
+                 <button
+                   type="submit"
+                   disabled={isInviting}
+                   className="mt-2 py-4 bg-[#16233c] hover:bg-black text-white font-bold text-xs uppercase tracking-widest transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                 >
+                   {isInviting ? (
+                     <>
+                       <RefreshCw className="w-4 h-4 animate-spin" />
+                       Sending...
+                     </>
+                   ) : (
+                     "Send Invite"
+                   )}
+                 </button>
+              </form>
+
+              {/* Active Admins List */}
+              <div className="bg-white p-6 md:p-8 border border-gray-200 flex-[2] shadow-sm flex flex-col gap-4 max-h-[500px] overflow-y-auto">
+                 <div className="border-b border-gray-100 pb-4 mb-2">
+                    <h3 className="text-lg font-bold font-serif text-[#16233c] tracking-tight">Active Administrators</h3>
+                    <p className="text-xs text-gray-500 font-medium">List of all active admin accounts in the system.</p>
+                 </div>
+                 <div className="flex flex-col gap-4">
+                   {adminList.map((admin) => (
+                     <div key={admin.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-gray-100 bg-gray-50 hover:bg-white transition gap-4">
+                        <div className="flex flex-col gap-1">
+                           <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-[#16233c]">{admin.fullName}</span>
+                              <span className="px-2 py-0.5 bg-[#be123c] text-white text-[9px] font-bold uppercase tracking-widest">{admin.staffId || 'PENDING SETUP'}</span>
+                           </div>
+                           <span className="text-xs font-mono text-gray-500">{admin.email}</span>
+                           <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mt-1">{admin.role === 0 ? "SuperAdmin" : admin.role === 1 ? "Admissions Officer" : admin.role === 2 ? "Academic Advisor" : admin.role === 3 ? "Bursar" : "Unknown Role"}</span>
+                        </div>
+                        <button
+                           onClick={() => handleDeactivateAdmin(admin.id)}
+                           className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 text-[10px] font-bold uppercase tracking-widest transition"
+                        >
+                           Deactivate
+                        </button>
+                     </div>
+                   ))}
+                   {adminList.length === 0 && (
+                     <p className="text-sm text-gray-500 text-center py-8">No admins found</p>
+                   )}
+                 </div>
+              </div>
+            </div>
+
+            {/* Admin Activity Logs */}
+            <div className="bg-white p-6 md:p-8 border border-gray-200 shadow-sm flex flex-col gap-4">
+               <div className="border-b border-gray-100 pb-4 mb-2 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-bold font-serif text-[#16233c] tracking-tight">System Activity Logs</h3>
+                    <p className="text-xs text-gray-500 font-medium">Monitoring track of administrative events.</p>
+                  </div>
+                  <button onClick={loadSystemData} className="p-2 hover:bg-gray-100 text-gray-500 transition">
+                     <RefreshCw className={`w-4 h-4 ${adminLoading ? 'animate-spin' : ''}`} />
+                  </button>
+               </div>
+               
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left border-collapse min-w-[700px]">
+                   <thead>
+                     <tr className="bg-gray-50 border-y border-gray-200">
+                       <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-[#16233c]">Timestamp</th>
+                       <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-[#16233c]">Admin</th>
+                       <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-[#16233c]">Action</th>
+                       <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-[#16233c]">Details</th>
+                     </tr>
+                   </thead>
+                   <tbody className="text-sm">
+                     {adminLogs.map((log) => (
+                       <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
+                         <td className="py-3 px-4 text-xs font-mono text-gray-500 whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
+                         <td className="py-3 px-4 font-medium text-[#16233c] whitespace-nowrap">{log.adminName}</td>
+                         <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap border border-gray-200">{log.action}</span>
+                         </td>
+                         <td className="py-3 px-4 text-gray-600 max-w-[200px] truncate" title={log.details}>{log.details}</td>
+                       </tr>
+                     ))}
+                     {adminLogs.length === 0 && (
+                       <tr>
+                         <td colSpan={4} className="py-8 text-center text-gray-500 text-sm">No activity logs recorded.</td>
+                       </tr>
+                     )}
+                   </tbody>
+                 </table>
+               </div>
             </div>
           </div>
         )}
