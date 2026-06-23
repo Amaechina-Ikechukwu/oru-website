@@ -31,23 +31,34 @@ export default function StudentPortal({ currentStudent, setCurrentStudent }: Stu
   const [studentPhoto, setStudentPhoto] = useState("https://images.unsplash.com/photo-1542744094-3a31f103e35f?q=80&w=200&auto=format&fit=crop");
 
   // Tuition payment state
-  const [tuitionPayAmount, setTuitionPayAmount] = useState(150000);
-  const [paidReceipts, setPaidReceipts] = useState<any[]>([
-    { date: "June 01, 2026", amount: 100000, desc: "Tuition Fee Payment", reference: "TXN-74859" }
-  ]);
+  const [tuitionPayAmount, setTuitionPayAmount] = useState<number | "">("");
+  const [tuitionInstallmentNumber, setTuitionInstallmentNumber] = useState(1);
+  const [tuitionNotes, setTuitionNotes] = useState("");
+  const [tuitionReceiptFile, setTuitionReceiptFile] = useState<File | null>(null);
+  
+  const [installments, setInstallments] = useState<any[]>([]);
+  const [financials, setFinancials] = useState<any>(null);
   const [payingTuition, setPayingTuition] = useState(false);
-  const [tuitionCard, setTuitionCard] = useState("");
   const [paySuccess, setPaySuccess] = useState(false);
+  
+  const loadFinancials = async () => {
+    try {
+      const [finRes, instRes] = await Promise.all([
+        studentApi.getFinancials(),
+        studentApi.getInstallments()
+      ]);
+      if (finRes.success) setFinancials(finRes.data);
+      if (instRes.success) setInstallments(instRes.data);
+    } catch (err) {
+      console.error("Failed to load financials:", err);
+    }
+  };
 
   // Load registered list on student update
   useEffect(() => {
     if (currentStudent) {
       setEnrolledList(currentStudent.enrolledCourses || []);
-      if (currentStudent.paidTuition) {
-        setPaidReceipts([
-          { date: "June 01, 2026", amount: currentStudent.paidTuition, desc: "Paid Tuition Receipt", reference: "TXN-Local" }
-        ]);
-      }
+      loadFinancials();
     }
   }, [currentStudent]);
 
@@ -153,30 +164,41 @@ export default function StudentPortal({ currentStudent, setCurrentStudent }: Stu
   };
 
   // Tuition Payment Checkout
-  const handlePayTuition = (e: React.FormEvent) => {
+  const handlePayTuition = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tuitionCard) return;
+    if (!tuitionPayAmount || !tuitionReceiptFile) return;
 
     setPayingTuition(true);
     setPaySuccess(false);
 
-    setTimeout(() => {
-      const newReceipt = {
-        date: new Date().toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' }),
-        amount: tuitionPayAmount,
-        desc: "Tuition Fee Payment",
-        reference: `TXN-${Math.floor(10000 + Math.random() * 90000)}`
-      };
+    const formData = new FormData();
+    formData.append("amount", tuitionPayAmount.toString());
+    formData.append("installmentNumber", tuitionInstallmentNumber.toString());
+    if (tuitionNotes) {
+      formData.append("notes", tuitionNotes);
+    }
+    formData.append("files", tuitionReceiptFile as Blob);
 
-      setPaidReceipts([newReceipt, ...paidReceipts]);
-      setTuitionCard("");
-      setPaySuccess(true);
+    try {
+      const res = await studentApi.submitInstallment(formData);
+      if (res.success) {
+        setPaySuccess(true);
+        setTuitionPayAmount("");
+        setTuitionNotes("");
+        setTuitionReceiptFile(null);
+        await loadFinancials();
+        setTimeout(() => {
+          setPaySuccess(false);
+          setShowPaymentModal(false);
+        }, 3000);
+      } else {
+        alert(res.message || "Failed to submit receipt.");
+      }
+    } catch (err: any) {
+      alert(err.message || "An error occurred.");
+    } finally {
       setPayingTuition(false);
-      setTimeout(() => {
-        setPaySuccess(false);
-        setShowPaymentModal(false);
-      }, 4000);
-    }, 1500);
+    }
   };
 
   // Browser interactive printable action
@@ -440,30 +462,56 @@ export default function StudentPortal({ currentStudent, setCurrentStudent }: Stu
                 <div className="flex flex-col gap-8">
                   <div className="bg-white p-8 border border-gray-200 shadow-md">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-6">
-                      <h3 className="font-bold text-[#16233c] text-sm uppercase tracking-widest">Payment History</h3>
+                      <h3 className="font-bold text-[#16233c] text-sm uppercase tracking-widest">Financial Records</h3>
                       <button
                         onClick={() => setShowPaymentModal(true)}
                         className="py-2 px-6 bg-[#be123c] hover:bg-[#9f0f32] text-white font-bold text-[10px] uppercase tracking-widest transition shadow-sm flex items-center justify-center gap-2 rounded-none"
                       >
-                        <CreditCard className="w-3 h-3" /> Make Payment
+                        <CreditCard className="w-3 h-3" /> Upload Receipt
                       </button>
                     </div>
-                    <div className="flex flex-col gap-3">
-                      {paidReceipts.map((rc, idx) => (
-                        <div key={idx} className="border border-gray-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 transition rounded-none">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-bold text-[#16233c] text-sm uppercase tracking-wide">{rc.desc}</span>
-                            <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                              <span>{rc.date}</span>
-                              <span>•</span>
-                              <span className="font-mono">Ref: {rc.reference}</span>
-                            </div>
-                          </div>
-                          <span className="font-mono font-bold text-[#16233c] border border-gray-200 bg-white px-3 py-1.5 text-sm shrink-0 rounded-none">
-                            ₦{rc.amount.toLocaleString()}
-                          </span>
+
+                    {financials && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4 border-b border-gray-100 pb-8">
+                        <div className="flex flex-col gap-1 border border-gray-200 p-4 bg-gray-50 text-center">
+                          <span className="text-[10px] uppercase text-gray-500 font-bold tracking-widest">Total Tuition Due</span>
+                          <span className="font-mono font-bold text-lg text-[#16233c]">₦{financials.totalTuitionDue?.toLocaleString() || 0}</span>
                         </div>
-                      ))}
+                        <div className="flex flex-col gap-1 border border-gray-200 p-4 bg-green-50 text-center border-green-200">
+                          <span className="text-[10px] uppercase text-green-700 font-bold tracking-widest">Total Amount Paid</span>
+                          <span className="font-mono font-bold text-lg text-green-700">₦{financials.totalAmountPaid?.toLocaleString() || 0}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 border border-gray-200 p-4 bg-red-50 text-center border-red-200">
+                          <span className="text-[10px] uppercase text-[#be123c] font-bold tracking-widest">Outstanding Balance</span>
+                          <span className="font-mono font-bold text-lg text-[#be123c]">₦{financials.outstandingBalance?.toLocaleString() || 0}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <h4 className="font-bold text-[#16233c] text-xs uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Installment Submissions</h4>
+                    <div className="flex flex-col gap-3">
+                      {installments.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic">No installment submissions found.</p>
+                      ) : (
+                        installments.map((inst, idx) => (
+                          <div key={idx} className="border border-gray-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 transition rounded-none">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-bold text-[#16233c] text-sm uppercase tracking-wide">Installment #{inst.installmentNumber}</span>
+                              <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                <span>{new Date(inst.submittedAt).toLocaleDateString()}</span>
+                                <span>•</span>
+                                <span className={`font-mono px-2 py-0.5 rounded-none text-white ${inst.status === 0 ? 'bg-yellow-500' : inst.status === 1 ? 'bg-green-600' : 'bg-red-600'}`}>
+                                  {inst.status === 0 ? 'Pending' : inst.status === 1 ? 'Approved' : 'Rejected'}
+                                </span>
+                              </div>
+                              {inst.notes && <p className="text-xs text-gray-600 mt-1">{inst.notes}</p>}
+                            </div>
+                            <span className="font-mono font-bold text-[#16233c] border border-gray-200 bg-white px-3 py-1.5 text-sm shrink-0 rounded-none">
+                              ₦{inst.amount?.toLocaleString()}
+                            </span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -556,35 +604,66 @@ export default function StudentPortal({ currentStudent, setCurrentStudent }: Stu
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="font-bold text-[#16233c] text-sm uppercase tracking-widest border-b border-gray-100 pb-4 mb-6">Make a Payment</h3>
+            <h3 className="font-bold text-[#16233c] text-sm uppercase tracking-widest border-b border-gray-100 pb-4 mb-6">Upload Tuition Receipt</h3>
             <form onSubmit={handlePayTuition} className="flex flex-col gap-5">
-              <select
-                value={tuitionPayAmount}
-                onChange={(e) => setTuitionPayAmount(Number(e.target.value))}
-                className="w-full p-4 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-[#16233c] bg-white text-sm transition rounded-none"
-              >
-                <option value={60000}>Diploma (₦60,000)</option>
-                <option value={280000}>Bachelor Degree (₦280,000)</option>
-                <option value={400000}>Masters Degree (₦400,000)</option>
-                <option value={650000}>Ph.D Degree (₦650,000)</option>
-              </select>
-              <input
-                type="text"
-                required
-                maxLength={19}
-                value={tuitionCard}
-                onChange={(e) => setTuitionCard(e.target.value)}
-                placeholder="Card Number (0000 0000 ...)"
-                className="w-full font-mono p-4 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-[#16233c] bg-white text-sm tracking-widest transition rounded-none"
-              />
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Installment Number</label>
+                <select
+                  value={tuitionInstallmentNumber}
+                  onChange={(e) => setTuitionInstallmentNumber(Number(e.target.value))}
+                  className="w-full p-4 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-[#16233c] bg-white text-sm transition rounded-none"
+                >
+                  <option value={1}>1st Installment (or Full Payment)</option>
+                  <option value={2}>2nd Installment</option>
+                  <option value={3}>3rd Installment</option>
+                  <option value={4}>4th Installment</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Amount Paid (₦)</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={tuitionPayAmount}
+                  onChange={(e) => setTuitionPayAmount(Number(e.target.value))}
+                  placeholder="e.g., 50000"
+                  className="w-full font-mono p-4 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-[#16233c] bg-white text-sm tracking-widest transition rounded-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Optional Notes</label>
+                <textarea
+                  value={tuitionNotes}
+                  onChange={(e) => setTuitionNotes(e.target.value)}
+                  placeholder="Any additional details..."
+                  className="w-full font-mono p-4 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-[#16233c] bg-white text-sm tracking-widest transition rounded-none resize-none h-20"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Receipt Upload (Image)</label>
+                <input
+                  type="file"
+                  required
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) setTuitionReceiptFile(e.target.files[0]);
+                  }}
+                  className="w-full font-mono p-4 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-[#16233c] bg-white text-sm tracking-widest transition rounded-none"
+                />
+              </div>
+
               <button
                 type="submit"
-                disabled={payingTuition || !tuitionCard}
+                disabled={payingTuition || !tuitionPayAmount || !tuitionReceiptFile}
                 className="w-full py-4 mt-2 bg-[#16233c] hover:bg-[#0d1629] text-white font-bold text-xs uppercase tracking-widest transition rounded-none"
               >
-                {payingTuition ? "Processing..." : "Pay Securely"}
+                {payingTuition ? "Uploading..." : "Submit Receipt"}
               </button>
-              {paySuccess && <p className="text-[10px] font-bold text-green-600 text-center uppercase tracking-widest mt-2 border border-green-200 bg-green-50 py-2 rounded-none">Payment Successful!</p>}
+              {paySuccess && <p className="text-[10px] font-bold text-green-600 text-center uppercase tracking-widest mt-2 border border-green-200 bg-green-50 py-2 rounded-none">Receipt Submitted Successfully!</p>}
             </form>
           </motion.div>
         </div>

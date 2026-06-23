@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PROGRAMS } from '../data';
 import { ApplicationStatus } from '../types';
-import { CheckCircle, Search, AlertTriangle, ChevronRight, GraduationCap, Building, Wallet, Calendar, Copy, ChevronDown, Plus, X, FileText, Upload } from 'lucide-react';
+import { CheckCircle, Search, AlertTriangle, ChevronRight, GraduationCap, Building, Wallet, Calendar, Copy, ChevronDown, Plus, X, FileText, Upload, Info } from 'lucide-react';
 import { PDF_CURRICULUM, PAYMENT_ACCOUNTS } from '../curriculumData';
 import { applicationsApi } from '../api';
 import { toast } from 'sonner';
@@ -297,6 +297,7 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
   const [program, setProgram] = useState(initialProgram || PROGRAMS[0].title);
   const [studyLevelId, setStudyLevelId] = useState<number>(3); // Default to Undergraduate
   const [studyLevels, setStudyLevels] = useState<{value: number, label: string}[]>([]);
+  const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchStudyLevels = async () => {
@@ -332,6 +333,11 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
       toast.error("Please fill out all personal details completely.");
       return;
     }
+    
+    if (!paymentReceipt) {
+      toast.error("Payment receipt must be uploaded before submitting the application.");
+      return;
+    }
 
     setLoading(true);
 
@@ -347,11 +353,29 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
 
       const result = await applicationsApi.submitApplication(payload);
       
-      if (result.success) {
+      if (result.success && result.data?.id) {
+        // Now upload the payment receipt
+        const formData = new FormData();
+        formData.append("file", paymentReceipt as Blob);
+        
+        try {
+          const uploadRes = await applicationsApi.submitReceipt(result.data.id, formData);
+          if (uploadRes.success) {
+            toast.success("Payment receipt submitted successfully!");
+          } else {
+            toast.warning("Application submitted, but failed to upload payment receipt.");
+          }
+        } catch (uploadErr) {
+          console.error("Receipt upload error:", uploadErr);
+          toast.warning("Application submitted, but failed to upload payment receipt.");
+        }
+
         toast.success("Application submitted successfully!");
         setSuccessEmail(email); 
         setSuccessAppId(result.data.id);
-        setUploadedDocuments(result.data.documents || []);
+        if (!uploadedDocuments.length && result.data.documents) {
+          setUploadedDocuments(result.data.documents);
+        }
       } else {
         toast.error(result.message || "An error occurred. Please try again.");
       }
@@ -380,6 +404,7 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
     setSuccessAppId("");
     setUploadedDocuments([]);
     setUploadSuccess(false);
+    setPaymentReceipt(null);
     navigateToTrack();
   };
 
@@ -485,6 +510,56 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
               <div className="flex flex-col gap-6">
                  {!successAppId ? (
                    <form onSubmit={handleSubmitApplication} className="flex flex-col gap-6 p-8 bg-gray-50 border border-gray-200 font-sans">
+                     
+                     {/* Dynamic Fee & Document Information Header */}
+                     <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-2">
+                       <div className="flex items-start">
+                         <Info className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+                         <div className="flex flex-col">
+                           <h5 className="font-bold text-yellow-800 text-sm mb-1">Required Verification Documents</h5>
+                           
+                           <div className="text-xs text-yellow-800 space-y-2">
+                             <div>
+                               <p className="font-bold border-b border-yellow-200 pb-1 mb-1">1. General Requirements (All Applicants)</p>
+                               <ul className="list-disc list-inside space-y-1">
+                                 <li><strong>Payment Receipt:</strong> Proof of registration fee payment (Strictly required below).</li>
+                                 <li><strong>Past Certificates:</strong> SSCE, NECO, GCE, or equivalent credentials.</li>
+                                 <li><strong>Photographs:</strong> Two recent passport-sized photographs.</li>
+                               </ul>
+                             </div>
+                             
+                             <div>
+                               <p className="font-bold border-b border-yellow-200 pb-1 mb-1 mt-3">2. Degree-Specific Requirements ({studyLevels.find(l => l.value === studyLevelId)?.label})</p>
+                               <ul className="list-disc list-inside space-y-1">
+                                 {(studyLevelId === 1 || studyLevelId === 2) && (
+                                   <>
+                                     <li><strong>Registration Fee:</strong> ₦10,000</li>
+                                     <li><strong>Academic Documents:</strong> Tertiary school certificate (if applicable) OR a formal letter of recommendation from your local assembly/church.</li>
+                                   </>
+                                 )}
+                                 {studyLevelId === 3 && (
+                                   <>
+                                     <li><strong>Registration Fee:</strong> ₦40,000</li>
+                                     <li><strong>Academic Documents:</strong> O'Level certificates showing a minimum of 5 credits. Must include English Language and Mathematics, alongside course-specific subjects.</li>
+                                   </>
+                                 )}
+                                 {(studyLevelId === 4 || studyLevelId === 5) && (
+                                   <>
+                                     <li><strong>Registration Fee:</strong> ₦70,000</li>
+                                     <li><strong>Academic Documents:</strong> Previous Bachelor's degree certificates or transcripts, along with baseline O'Level credits required for university entry.</li>
+                                   </>
+                                 )}
+                               </ul>
+                             </div>
+                           </div>
+                           
+                           <p className="mt-3 text-xs font-bold text-yellow-900 border-t border-yellow-200 pt-2">
+                             Note: Before this application is submitted, you must upload your payment receipt below. Other documents will be uploaded after submitting the initial form.
+                           </p>
+                         </div>
+                       </div>
+                     </div>
+
                      <div className="flex flex-col gap-2">
                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Candidate Full Name</label>
                        <input
@@ -551,6 +626,31 @@ export default function ApplicationPortal({ initialProgram }: ApplicationPortalP
                          options={studyLevels}
                          placeholder="Select Study Level"
                        />
+                     </div>
+
+                     <div className="flex flex-col gap-2 mt-4 border-t border-gray-200 pt-6">
+                       <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Payment Receipt File <span className="text-red-500">*</span></label>
+                       <p className="text-xs text-gray-500 mb-2">Upload your proof of registration payment. Applications without a valid receipt cannot be processed.</p>
+                       <div className="flex items-center">
+                         <label
+                           htmlFor="payment-receipt-upload"
+                           className="flex items-center justify-center gap-2 text-sm px-6 h-12 border border-gray-300 bg-white text-[#16233c] hover:bg-gray-50 cursor-pointer transition-colors shadow-sm w-full md:w-auto"
+                         >
+                           <Upload className="w-4 h-4" />
+                           {paymentReceipt ? paymentReceipt.name : "Select Receipt File"}
+                         </label>
+                         <input
+                           type="file"
+                           id="payment-receipt-upload"
+                           className="hidden"
+                           accept=".pdf,.jpg,.jpeg,.png"
+                           onChange={(e) => {
+                             if (e.target.files && e.target.files.length > 0) {
+                               setPaymentReceipt(e.target.files[0]);
+                             }
+                           }}
+                         />
+                       </div>
                      </div>
 
                      <button

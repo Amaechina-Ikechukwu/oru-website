@@ -101,6 +101,53 @@ export default function AboutSection() {
           </div>
         </motion.section>
 
+        {/* Academic Distinctions & Doctoral Paths */}
+        <motion.section 
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="flex flex-col gap-10 text-left pt-10 border-t border-gray-200 mt-4" id="about-academic-distinctions"
+        >
+          <div className="flex flex-col gap-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#16233c] font-serif mt-2">Academic Specifics & Doctoral Paths</h2>
+            <p className="text-sm text-gray-600 max-w-3xl leading-relaxed font-medium">
+              For leaders pursuing advanced specialization, understanding specific academic conventions is critical. Our advisory team often addresses inquiries regarding theology and specialized psychology combinations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm text-gray-600 leading-relaxed font-medium">
+            <div className="bg-white p-8 border border-gray-100 rounded-none shadow-sm flex flex-col gap-4 relative">
+              <h3 className="text-xl font-bold font-serif text-[#16233c]">Ph.D. in Contextual Theology</h3>
+              <p>For those pursuing a Contextual Theology Ph.D., notable institutions internationally recognized include:</p>
+              <ul className="list-disc list-inside space-y-2 text-gray-600 marker:text-[#be123c]">
+                <li><strong>Oral Roberts University</strong> offers a Ph.D. in Contextual Theology via online, flex, and on-campus frameworks.</li>
+                <li><strong>Claremont School of Theology</strong> offers a Ph.D. in Religion with Contextual Theologies concentrations.</li>
+                <li><strong>Urban Theology Union</strong> provides validated PhD research supervision in Contextual Theology.</li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 border border-gray-100 rounded-none shadow-sm flex flex-col gap-4 relative">
+              <h3 className="text-xl font-bold font-serif text-[#16233c]">The "Abnormal Psychology" Reality</h3>
+              <p>It's important to clarify that universities generally do not award a degree formally titled "Ph.D. in Abnormal Psychology." Rather, abnormal behaviour is studied within Clinical Science or Psychopathology.</p>
+              <ul className="list-disc list-inside space-y-2 text-gray-600 marker:text-[#be123c]">
+                <li><strong>University of Minnesota</strong> (Clinical Science & Psychopathology)</li>
+                <li><strong>Texas A&M University</strong> (Clinical Psychology)</li>
+              </ul>
+              <p className="mt-2 text-xs italic text-gray-500 border-t border-gray-100 pt-3">
+                Therefore, specializations are usually classified under Ph.D. in Clinical or Counseling Psychology, not "Abnormal Psychology." ORU offers the Contextual Theology Ph.D. but not Clinical Psychology.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-gray-100 p-6 md:p-8 border border-gray-200 mt-2 rounded-none font-medium">
+            <h4 className="text-base font-bold text-[#16233c] uppercase tracking-widest mb-3">Recommended Academic Combination</h4>
+            <p className="text-gray-600 text-sm leading-relaxed max-w-4xl">
+              If your goal is to merge theology and professional counseling, a powerful academic track would be a BA in Biblical Literature, an MA in Professional Counseling, and either a Ph.D. in Contextual Theology (e.g., from ORU) or a Ph.D. in Clinical Psychology focusing on psychopathology from a recognized psychology program.
+            </p>
+          </div>
+        </motion.section>
+
         {/* 2. Four Pillars Core Values */}
         <motion.section 
           initial={{ opacity: 0, scale: 0.95 }}

@@ -121,6 +121,7 @@ export const applicationsApi = {
   getStudyLevels: () => fetchApi<any[]>('/api/applications/study-levels', { method: 'GET' }),
   submitApplication: (data: any) => fetchApi<any>('/api/applications', { method: 'POST', body: JSON.stringify(data) }),
   checkStatus: (email: string) => fetchApi<any>(`/api/applications/status/${encodeURIComponent(email)}`, { method: 'GET' }),
+  submitReceipt: (id: string, formData: FormData) => fetchApi<any>(`/api/applications/${id}/submit-receipt`, { method: 'POST', body: formData }),
   uploadDocuments: (id: string, name: string, formData: FormData) => fetchApi<any>(`/api/applications/${id}/documents?name=${encodeURIComponent(name)}`, { method: 'POST', body: formData }),
   replaceDocument: (id: string, documentId: string, formData: FormData) => fetchApi<any>(`/api/applications/${id}/documents/${documentId}`, { method: 'PUT', body: formData }),
   deleteDocument: (id: string, documentId: string) => fetchApi<any>(`/api/applications/${id}/documents/${documentId}`, { method: 'DELETE' })

@@ -34,8 +34,12 @@ export default function AdminPortal() {
   // Document preview modal state
   const [previewDocument, setPreviewDocument] = useState<{url: string, name: string, type?: string} | null>(null);
 
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [studentInstallments, setStudentInstallments] = useState<any[]>([]);
+  
   // Common administration flags
-  const [activeAdminSubTab, setActiveAdminSubTab] = useState("applications"); // 'applications', 'broadcasts', 'inbound'
+  const [activeAdminSubTab, setActiveAdminSubTab] = useState("applications"); // 'applications', 'broadcasts', 'inbound', 'students'
   const [appFilter, setAppFilter] = useState("all"); // 'all', 'pending', 'approved'
   const [adminLoading, setAdminLoading] = useState(false);
 
@@ -75,29 +79,29 @@ export default function AdminPortal() {
       const currentFilter = (typeof overrideFilter === 'string') ? overrideFilter : appFilter;
       
       if (currentFilter === 'all') {
-        const [resPending, resApproved, resRejected] = await Promise.all([
+        const [resPending, resApproved, resRejected, resStudents] = await Promise.all([
           adminApi.listApplications(undefined, 1, 100),
           adminApi.listApplications(2, 1, 100),
-          adminApi.listApplications(3, 1, 100)
+          adminApi.listApplications(3, 1, 100),
+          adminApi.listStudents(undefined, undefined, 1, 100)
         ]);
         const allApps = [];
         if (resPending.success && resPending.data?.items) allApps.push(...resPending.data.items);
         if (resApproved.success && resApproved.data?.items) allApps.push(...resApproved.data.items);
         if (resRejected.success && resRejected.data?.items) allApps.push(...resRejected.data.items);
         setApplications(allApps);
+        if (resStudents.success && resStudents.data?.students) setStudents(resStudents.data.students);
       } else {
-        let status;
-        if (currentFilter === 'pending') status = 0;
-        else if (currentFilter === 'reviewing') status = 1;
-        else if (currentFilter === 'approved') status = 2;
-        else if (currentFilter === 'rejected') status = 3;
-        
-        const res = await adminApi.listApplications(status, 1, 100);
+        const [res, resStudents] = await Promise.all([
+          adminApi.listApplications(currentFilter === 'pending' ? 0 : currentFilter === 'reviewing' ? 1 : currentFilter === 'approved' ? 2 : currentFilter === 'rejected' ? 3 : undefined, 1, 100),
+          adminApi.listStudents(undefined, undefined, 1, 100)
+        ]);
         if (res.success && res.data?.items) {
           setApplications(res.data.items);
         } else {
           setApplications([]);
         }
+        if (resStudents.success && resStudents.data?.students) setStudents(resStudents.data.students);
       }
 
       // 2. Mock Messages/Inquiries query
@@ -196,6 +200,37 @@ export default function AdminPortal() {
       message: "Are you sure you want to broadcast this announcement? It will be visible to everyone immediately.",
       onConfirm: submitBroadcast
     });
+  };
+
+  const handleViewStudentInstallments = async (studentId: string) => {
+    try {
+      const res = await adminApi.getStudentInstallments(studentId);
+      if (res.success) {
+        setStudentInstallments(res.data);
+        setSelectedStudent(studentId);
+      } else {
+        toast.error("Failed to fetch installments");
+      }
+    } catch (err) {
+      toast.error("Error fetching installments");
+    }
+  };
+
+  const handleReviewInstallment = async (submissionId: string, status: number) => {
+    if (!selectedStudent) return;
+    try {
+      const res = await adminApi.reviewInstallment(selectedStudent, submissionId, status);
+      if (res.success) {
+        toast.success(status === 1 ? "Installment Approved" : "Installment Rejected");
+        setStudentInstallments(studentInstallments.map(inst => 
+          inst.id === submissionId ? { ...inst, status } : inst
+        ));
+      } else {
+        toast.error(res.message || "Failed to update installer status");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update installer status");
+    }
   };
 
   const handleDeleteMessage = async (msgId: string) => {
@@ -303,6 +338,7 @@ export default function AdminPortal() {
           {[
             { id: 'applications', label: 'Admissions Applications', icon: FileText },
             { id: 'broadcasts', label: 'Broadcast Announcements', icon: Megaphone },
+            { id: 'students', label: 'Students & Finances', icon: Bookmark },
             { id: 'inbound', label: 'Inbound Support Desk', icon: MessageCircle },
           ].map((sub) => {
             const Icon = sub.icon;
@@ -600,7 +636,130 @@ export default function AdminPortal() {
           </div>
         )}
 
+        {/* SUB TAB 4: Students & Finances */}
+        {activeAdminSubTab === "students" && (
+          <div className="flex flex-col gap-6" id="admin-students-tab">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 pb-2">Enrolled Students & Tuition Records</span>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {students.length === 0 ? (
+                <div className="p-10 text-center bg-white border border-dashed border-gray-300 md:col-span-2 lg:col-span-3 shadow-sm">
+                  <Bookmark className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <span className="text-sm font-medium text-gray-500 block">No enrolled students found.</span>
+                </div>
+              ) : (
+                students.map((student) => (
+                  <div key={student.id} className="text-left flex flex-col justify-between gap-4 relative p-6 bg-white border border-gray-200 hover:border-[#16233c] transition group">
+                    <div className="flex flex-col gap-2 relative z-10">
+                      <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+                        <span className="font-mono text-[9px] text-gray-400 font-bold uppercase tracking-widest">{student.matricNumber}</span>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 bg-[#16233c] text-white`}>
+                          Active
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <strong className="text-lg font-serif font-bold text-[#16233c] tracking-tight">{student.fullName}</strong>
+                        <span className="text-xs text-gray-500 font-medium mt-1">{student.email}</span>
+                        <span className="text-xs text-[#be123c] font-bold mt-1 block">{student.program}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-4 border-t border-gray-100 relative z-10">
+                      <button
+                        onClick={() => handleViewStudentInstallments(student.id)}
+                        className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-[#16233c] border border-gray-200 text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2 transition"
+                      >
+                        <FileText className="w-3 h-3 shrink-0" />
+                        <span>Review Tuition Installments</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
+
+      {/* Installment Review Modal */}
+      {selectedStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedStudent(null)}>
+          <div className="bg-white max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-xl border-2 border-[#16233c]" onClick={(e) => e.stopPropagation()}>
+             <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50">
+               <div>
+                 <h3 className="text-xl font-bold font-serif tracking-tight text-[#16233c] mb-1">Student Installments</h3>
+                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Review Tuition Receipts</p>
+               </div>
+               <button onClick={() => setSelectedStudent(null)} className="p-2 text-gray-400 hover:text-red-600 transition">
+                 <X className="w-6 h-6" />
+               </button>
+             </div>
+             
+             <div className="flex-1 overflow-y-auto p-6 bg-white space-y-6">
+               {studentInstallments.length === 0 ? (
+                 <div className="text-center p-12 text-gray-400 font-medium text-sm">
+                    No installments submitted by this student yet.
+                 </div>
+               ) : (
+                 studentInstallments.map((inst, i) => (
+                   <div key={i} className="border border-gray-200 p-6 flex flex-col md:flex-row gap-6 items-start bg-gray-50">
+                     <div className="flex-1 flex flex-col gap-3 w-full">
+                       <div className="flex items-center gap-4 border-b border-gray-200 pb-3">
+                         <span className="font-bold text-[#16233c] text-lg uppercase tracking-wide">Installment #{inst.installmentNumber}</span>
+                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 ${inst.status === 0 ? 'bg-yellow-100 text-yellow-800' : inst.status === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                           {inst.status === 0 ? 'Pending' : inst.status === 1 ? 'Approved' : 'Rejected'}
+                         </span>
+                       </div>
+                       <div className="flex flex-col gap-1">
+                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Amount Submitted</span>
+                         <span className="font-mono font-bold text-lg text-[#16233c]">₦{inst.amount?.toLocaleString()}</span>
+                       </div>
+                       {inst.notes && (
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Student Notes</span>
+                           <span className="text-sm text-gray-700 bg-white p-3 border border-gray-200">{inst.notes}</span>
+                         </div>
+                       )}
+                       <div className="flex flex-col gap-1">
+                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Submitted On</span>
+                         <span className="text-xs text-gray-600">{new Date(inst.submittedAt).toLocaleString()}</span>
+                       </div>
+                     </div>
+                     <div className="flex flex-col gap-3 w-full md:w-64 shrink-0">
+                       <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1 border-b border-gray-200 pb-2">Actions & Receipts</span>
+                       {inst.screenshotUrls?.map((url: string, uIdx: number) => (
+                         <button 
+                           key={uIdx}
+                           onClick={() => setPreviewDocument({url, name: `Receipt Image ${uIdx+1}`})}
+                           className="py-2.5 px-4 bg-white hover:bg-gray-100 text-[#16233c] border border-gray-300 text-xs font-bold uppercase tracking-widest transition flex items-center gap-2"
+                         >
+                           <FileText className="w-3 h-3" /> View Receipt {uIdx+1}
+                         </button>
+                       ))}
+                       {inst.status === 0 && (
+                         <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-200">
+                           <button 
+                             onClick={() => handleReviewInstallment(inst.id, 1)}
+                             className="py-3 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 font-bold uppercase tracking-widest text-xs transition flex items-center justify-center gap-2"
+                           >
+                             <Check className="w-3 h-3" /> Approve
+                           </button>
+                           <button 
+                             onClick={() => handleReviewInstallment(inst.id, 2)}
+                             className="py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold uppercase tracking-widest text-xs transition flex items-center justify-center gap-2"
+                           >
+                             <X className="w-3 h-3" /> Reject
+                           </button>
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                 ))
+               )}
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* Document Preview Modal */}
       {previewDocument && (

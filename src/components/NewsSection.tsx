@@ -131,6 +131,10 @@ export default function NewsSection({ isAdminMode }: NewsSectionProps) {
         {selectedCategory === "Gallery" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in mb-8">
             {[
+               '/events/WhatsApp Image 2026-06-20 at 06.5.jpeg',
+               '/events/WhatsApp Image 2026-06-20 at 06.51.50.jpeg',
+               '/events/WhatsApp Image 2026-06-20 at 06.51.51.jpeg',
+               '/events/WhatsApp Image 2026-06-20 at 06.51.jpeg',
                'https://images.unsplash.com/photo-1523580494112-071d16940d14?q=80&w=800&auto=format&fit=crop', // Graduation
                'https://images.unsplash.com/photo-1431576901776-e539bd916ba2?q=80&w=800&auto=format&fit=crop', // Classroom / student
                'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=800&auto=format&fit=crop', // Campus building
@@ -140,9 +144,9 @@ export default function NewsSection({ isAdminMode }: NewsSectionProps) {
             ].map((url, idx) => (
               <div key={idx} className="bg-gray-100 rounded-none overflow-hidden aspect-video relative group cursor-pointer border border-gray-200">
                 <img src={url} alt="Gallery Event" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300"></div>
+                <div className="absolute inset-0 bg-[#16233c]/30 group-hover:bg-[#16233c]/60 transition-colors duration-300 pointer-events-none"></div>
                 <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <span className="text-[10px] uppercase font-bold tracking-widest bg-[#16233c]/80 px-2 py-1 rounded-none backdrop-blur">Event Detail</span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest bg-[#16233c] px-2 py-1 rounded-none backdrop-blur">Event Detail</span>
                 </div>
               </div>
             ))}
