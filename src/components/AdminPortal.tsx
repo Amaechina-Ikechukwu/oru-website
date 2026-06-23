@@ -425,6 +425,25 @@ export default function AdminPortal() {
                       </div>
 
                       <div className="text-sm border-t border-gray-50 pt-3 flex items-center justify-between">
+                         <span className="text-gray-400 block text-[9px] uppercase font-bold tracking-widest">Application Fee</span>
+                         {app.applicationFeePaid ? (
+                            <span className="text-green-700 bg-green-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-green-200">Paid</span>
+                         ) : app.applicationFeeReceiptUrl ? (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setPreviewDocument({url: app.applicationFeeReceiptUrl, name: 'Fee Receipt'});
+                              }}
+                              className="text-yellow-700 bg-yellow-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider hover:bg-yellow-100 flex items-center gap-1 border border-yellow-200 transition"
+                            >
+                              <FileText className="w-3 h-3" /> Receipt Uploaded
+                            </button>
+                         ) : (
+                            <span className="text-red-700 bg-red-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-200">Unpaid</span>
+                         )}
+                      </div>
+
+                      <div className="text-sm border-t border-gray-50 pt-3 flex items-center justify-between">
                          <span className="text-gray-400 block text-[9px] uppercase font-bold tracking-widest">Application Date</span>
                          <span className="text-gray-800 text-xs font-medium">{new Date(app.submittedAt).toLocaleDateString()}</span>
                       </div>
